@@ -1,8 +1,11 @@
+use libc::{statfs, getfsstat, MNT_NOWAIT, MNT_RDONLY};
+
 use crate::MountInfo;
 use std::ffi::CStr;
 use std::fmt;
 use std::os::raw::{c_char, c_int};
 
+/*
 #[allow(non_camel_case_types)]
 type uid_t = u32;
 
@@ -11,11 +14,12 @@ struct fsid_t {
     val: [i32; 2],
 }
 
+
 const MFSTYPENAMELEN: usize = 16;
 const MAXPATHLEN: usize = 1024;
 const MNT_NOWAIT: c_int = 2;
 const MNT_RDONLY: u32 = 1;
-
+ 
 #[repr(C)]
 struct statfs64 {
     /// fundamental file system block size
@@ -55,13 +59,13 @@ struct statfs64 {
 extern "C" {
     #[link_name = "\u{1}_getfsstat$INODE64"]
     fn getfsstat(buf: *mut statfs64, bufsize: c_int, flags: c_int) -> c_int;
-}
+} */
 
 #[derive(Debug)]
 pub enum Error {
     GetMntInfo64(c_int),
     Utf8Error,
-}
+} 
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -72,12 +76,12 @@ impl fmt::Display for Error {
     }
 }
 
-fn _mounts(mut cb: impl FnMut(&statfs64, String) -> Result<(), Error>) -> Result<(), Error> {
+fn _mounts(mut cb: impl FnMut(&statfs, String) -> Result<(), Error>) -> Result<(), Error> {
     let mut n: i32 = unsafe { getfsstat(std::ptr::null_mut(), 0, MNT_NOWAIT) };
-    let mut mntbuf = Vec::<statfs64>::new();
+    let mut mntbuf = Vec::<statfs>::new();
     if n > 0 {
         mntbuf.resize_with(n as usize, || unsafe { std::mem::zeroed() });
-        let bufsize = mntbuf.len() * std::mem::size_of::<statfs64>();
+        let bufsize = mntbuf.len() * std::mem::size_of::<statfs>();
         n = unsafe { getfsstat(mntbuf.as_mut_ptr(), bufsize as c_int, MNT_NOWAIT) };
         if n >= 0 {
             mntbuf.truncate(n as usize);
@@ -108,7 +112,7 @@ pub fn mountinfos() -> Result<Vec<MountInfo>, Error> {
                     .map_err(|_| Error::Utf8Error)?
                     .into(),
             ),
-            readonly: Some((stat.f_flags & MNT_RDONLY) == MNT_RDONLY),
+            readonly: Some((stat.f_flags & (MNT_RDONLY as u32)) == MNT_RDONLY as u32),
             dummy: false,
         });
         Ok(())
