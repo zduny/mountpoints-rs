@@ -110,7 +110,6 @@ pub fn mountinfos() -> Result<Vec<MountInfo>, Error> {
             ),
             readonly: Some((stat.f_flags & MNT_RDONLY) == MNT_RDONLY),
             dummy: false,
-            __priv: (),
         });
         Ok(())
     })?;

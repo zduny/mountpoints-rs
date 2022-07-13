@@ -13,6 +13,7 @@ use macos as sys;
 use windows as sys;
 
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct MountInfo {
     /// Mount path
     pub path: String,
@@ -30,7 +31,6 @@ pub struct MountInfo {
     pub readonly: Option<bool>,
     /// True if this mount point is likely to not be important
     pub dummy: bool,
-    __priv: (),
 }
 
 pub use sys::{mountinfos, mountpaths, Error};
