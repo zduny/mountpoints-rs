@@ -61,7 +61,12 @@ pub fn mountinfos() -> Result<Vec<MountInfo>, Error> {
             avail: Some(stat.f_bavail.saturating_mul(u64::from(stat.f_bsize))),
             free: Some(stat.f_bfree.saturating_mul(u64::from(stat.f_bsize))),
             size: Some(stat.f_blocks.saturating_mul(u64::from(stat.f_frsize))),
-            name: None,
+            name: Some(
+                unsafe { CStr::from_ptr(stat.f_mntfromname.as_ptr() as *const c_char) }
+                    .to_str()
+                    .map_err(|_| Error::Utf8Error)?
+                    .into(),
+            ),
             format: fstype.map(|s| s.to_string()),
             readonly: Some((stat.f_flag & libc::ST_RDONLY) == libc::ST_RDONLY),
             dummy,

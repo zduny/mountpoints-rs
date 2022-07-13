@@ -1,4 +1,4 @@
-use libc::{statfs, getfsstat, MNT_NOWAIT, MNT_RDONLY};
+use libc::{getfsstat, statfs, MNT_NOWAIT, MNT_RDONLY};
 
 use crate::MountInfo;
 use std::ffi::CStr;
@@ -19,7 +19,7 @@ const MFSTYPENAMELEN: usize = 16;
 const MAXPATHLEN: usize = 1024;
 const MNT_NOWAIT: c_int = 2;
 const MNT_RDONLY: u32 = 1;
- 
+
 #[repr(C)]
 struct statfs64 {
     /// fundamental file system block size
@@ -38,7 +38,7 @@ struct statfs64 {
     f_ffree: u64,
     /// file system id
     f_fsid: fsid_t,
-    /// user that mounted the filesystem    
+    /// user that mounted the filesystem
     f_owner: uid_t,
     /// type of filesystem
     f_type: u32,
@@ -52,7 +52,7 @@ struct statfs64 {
     f_mntonname: [u8; MAXPATHLEN],
     /// mounted filesystem
     f_mntfromname: [u8; MAXPATHLEN],
-    /// For future use  
+    /// For future use
     f_reserved: [u32; 8],
 }
 
@@ -65,7 +65,7 @@ extern "C" {
 pub enum Error {
     GetMntInfo64(c_int),
     Utf8Error,
-} 
+}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -105,7 +105,12 @@ pub fn mountinfos() -> Result<Vec<MountInfo>, Error> {
             avail: Some(stat.f_bavail.saturating_mul(u64::from(stat.f_bsize))),
             free: Some(stat.f_bfree.saturating_mul(u64::from(stat.f_bsize))),
             size: Some(stat.f_blocks.saturating_mul(u64::from(stat.f_bsize))),
-            name: None,
+            name: Some(
+                unsafe { CStr::from_ptr(stat.f_mntfromname.as_ptr() as *const c_char) }
+                    .to_str()
+                    .map_err(|_| Error::Utf8Error)?
+                    .into(),
+            ),
             format: Some(
                 unsafe { CStr::from_ptr(stat.f_fstypename.as_ptr() as *const c_char) }
                     .to_str()
